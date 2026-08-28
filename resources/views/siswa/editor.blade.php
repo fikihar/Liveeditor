@@ -75,6 +75,8 @@
   </div>
 
   <!-- Sembunyikan kode asli dengan aman di dalam textarea DOM, bukan langsung di JS -->
+  <textarea id="starter-html-data" style="display:none;">{{ $assignment->starter_html }}</textarea>
+  <textarea id="starter-css-data" style="display:none;">{{ $assignment->starter_css }}</textarea>
   <textarea id="raw-html-data" style="display:none;">{{ $submission->html_code ?? '' }}</textarea>
   <textarea id="raw-css-data" style="display:none;">{{ $submission->css_code ?? '' }}</textarea>
 
@@ -98,7 +100,7 @@
         <div class="title">{{ $assignment->title }}</div>
       </div>
             @if($assignment->type === 'tugas' && $submission->status === 'submitted')
-        <button class="btn-submit" style="background:rgba(239,68,68,0.1);color:#ef4444;" onclick="resetCode()" title="Ulangi dari Awal" type="button">Reset</button> <button class="btn-submit" style="background:rgba(255,255,255,0.1);color:#94a3b8;cursor:not-allowed;" disabled>Terkunci</button>
+        <button class="btn-submit" style="background:rgba(239,68,68,0.05);color:#fca5a5;cursor:not-allowed;" disabled type="button">Reset</button> <button class="btn-submit" style="background:rgba(255,255,255,0.1);color:#94a3b8;cursor:not-allowed;" disabled>Terkunci</button>
       @else
         <button class="btn-submit" style="background:rgba(239,68,68,0.1);color:#ef4444;" onclick="resetCode()" title="Ulangi dari Awal" type="button">Reset</button> <button class="btn-submit" onclick="submitWork()">{{ $assignment->type === 'latihan' ? 'Selesai' : 'Kumpulkan' }}</button>
       @endif
@@ -175,6 +177,7 @@
     }
 
     function confirmSubmit() {
+        isNavigating = true;
       const btn = document.querySelector('.btn-confirm');
       btn.innerHTML = '<svg class="spinner" viewBox="0 0 24 24"><circle class="path" cx="12" cy="12" r="10" fill="none" stroke-width="4"></circle></svg> Mengirim...';
       btn.style.opacity = '0.8';
@@ -187,6 +190,7 @@
     }
 
     function saveDraft(e) {
+        isNavigating = true;
       e.preventDefault();
       document.getElementById('inputHtml').value = window.getHtmlCode();
       document.getElementById('inputCss').value = window.getCssCode();
@@ -204,8 +208,8 @@
         cheatTimer = setTimeout(() => {
             isCheating = true;
             presenceChannel.whisper('cheat', { id: {{ auth()->id() }}, cheating: true });
-        if ('{{ $assignment->type }}' === 'tugas') {
-            fetch('{{ route('siswa.editor.cheat', $assignment) }}', { method: 'POST', headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'), 'Accept': 'application/json' }});
+        if (!isNavigating && '{{ $assignment->type }}' === 'tugas') {
+              fetch('{{ route('siswa.editor.cheat', $assignment) }}', { method: 'POST', headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'), 'Accept': 'application/json' }});
         }
             fetch("{{ route('siswa.editor.log', $assignment) }}", {
               method: "POST",
@@ -217,9 +221,7 @@
         clearTimeout(cheatTimer);
         if (isCheating) {
             presenceChannel.whisper('cheat', { id: {{ auth()->id() }}, cheating: false });
-        if ('{{ $assignment->type }}' === 'tugas') {
-            fetch('{{ route('siswa.editor.cheat', $assignment) }}', { method: 'POST', headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'), 'Accept': 'application/json' }});
-        }
+        
             const alert = document.getElementById('cheatAlert');
             alert.classList.add('show');
             setTimeout(() => alert.classList.remove('show'), 5000);
@@ -243,7 +245,8 @@
         enabledTransports: ['ws', 'wss'],
     });
 
-    const presenceChannel = window.Echo.join('assignment.{{ $assignment->id }}');
+    let isNavigating = false;
+      const presenceChannel = window.Echo.join('assignment.{{ $assignment->id }}');
     
     let typingTimer;
     function notifyTyping() {
