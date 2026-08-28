@@ -1,4 +1,4 @@
-<h1 align="center">
+﻿<h1 align="center">
   <br>
   📝 ClassEditor — Live Code Editor untuk Kelas SMK
   <br>
@@ -13,7 +13,7 @@
   <img src="https://img.shields.io/badge/Laravel-11-FF2D20?style=flat&logo=laravel&logoColor=white" alt="Laravel 11">
   <img src="https://img.shields.io/badge/PHP-8.2+-777BB4?style=flat&logo=php&logoColor=white" alt="PHP 8.2+">
   <img src="https://img.shields.io/badge/MySQL-8.0-4479A1?style=flat&logo=mysql&logoColor=white" alt="MySQL 8">
-  <img src="https://img.shields.io/badge/Tailwind_CSS-3-06B6D4?style=flat&logo=tailwindcss&logoColor=white" alt="Tailwind CSS">
+  <img src="https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?style=flat&logo=tailwindcss&logoColor=white" alt="Tailwind CSS">
   <img src="https://img.shields.io/badge/Alpine.js-3-8BC0D0?style=flat&logo=alpinedotjs&logoColor=white" alt="Alpine.js">
   <img src="https://img.shields.io/badge/CodeMirror-6-D30707?style=flat" alt="CodeMirror 6">
 </p>
@@ -51,66 +51,168 @@ Siswa mendapatkan pengalaman coding yang terfokus dengan:
 
 ---
 
-## 🛠️ Tech Stack
+## 🛠️ Tech Stack & Packages
 
-- **Backend**: Laravel 11 (PHP 8.2+)
-- **Database**: MySQL 8 (nama DB: `classeditor`)
-- **Frontend**: Tailwind CSS, Alpine.js
-- **Code Editor**: CodeMirror 6
-- **Real-time**: Laravel Reverb (WebSockets)
-- **Import Excel**: Maatwebsite/Laravel-Excel
+### Backend (PHP / Composer)
+
+| Package | Versi | Keterangan | Status |
+|---|---|---|---|
+| Laravel Framework | ^12.0 | Core framework | ✅ Otomatis via `composer install` |
+| Laravel Reverb | ^1.11 | WebSocket server (real-time monitoring) | ✅ Otomatis via `composer install` |
+| Maatwebsite/Excel | 3.1.70 | Import data siswa dari file .xlsx | ✅ Otomatis via `composer install` |
+| Laravel Tinker | ^2.10 | REPL untuk debugging | ✅ Otomatis via `composer install` |
+
+### Frontend (JavaScript / NPM)
+
+| Package | Versi | Keterangan | Status |
+|---|---|---|---|
+| Tailwind CSS | ^4.3 | Utility-first CSS framework | ✅ Otomatis via `npm install` |
+| Alpine.js | ^3.16 | Reaktivitas ringan di frontend | ✅ Otomatis via `npm install` |
+| Vite | ^5.4 | Build tool & hot-reload | ✅ Otomatis via `npm install` |
+| Axios | ^1.11 | HTTP client untuk request AJAX | ✅ Otomatis via `npm install` |
+| Concurrently | ^9.0 | Jalankan banyak proses sekaligus | ✅ Otomatis via `npm install` |
+
+> **Semua package sudah terdaftar di `composer.json` dan `package.json`.**
+> Tidak perlu install manual satu per satu — cukup jalankan `composer install` dan `npm install`.
 
 ---
 
-## 🚀 Cara Install (Development)
+## 🚀 Panduan Instalasi
 
 ### Prasyarat
-- PHP 8.2+
-- Composer
-- Node.js & NPM
-- MySQL 8
-- (Opsional) Laragon untuk Windows
 
-### Langkah-langkah
+Pastikan sudah terinstall di sistem:
+- **PHP 8.2+** — cek: `php -v`
+- **Composer** — cek: `composer -V`
+- **Node.js 18+ & NPM** — cek: `node -v` dan `npm -v`
+- **MySQL 8** — cek: `mysql --version`
+
+> 💡 Di Windows, disarankan menggunakan **[Laragon](https://laragon.org/)** — sudah menyertakan PHP, MySQL, dan Composer dalam satu paket.
+
+---
+
+### Langkah 1 — Clone & Install Dependencies
 
 ```bash
-# 1. Clone repository
+# Clone repository
 git clone https://github.com/fikihar/Liveeditor.git
 cd Liveeditor
 
-# 2. Install dependencies PHP
+# Install semua package PHP (termasuk Reverb, Maatwebsite/Excel, dll)
 composer install
 
-# 3. Install dependencies JS
+# Install semua package JS (termasuk Tailwind CSS, Alpine.js, Vite, dll)
 npm install
+```
 
-# 4. Salin file konfigurasi
+---
+
+### Langkah 2 — Konfigurasi Environment
+
+```bash
+# Salin file konfigurasi
 cp .env.example .env
 
-# 5. Generate app key
+# Generate application key
 php artisan key:generate
 ```
 
-**Edit file `.env`**, sesuaikan konfigurasi database:
+Buka file `.env` dan sesuaikan konfigurasi berikut:
 
 ```env
+APP_NAME=ClassEditor
+APP_URL=http://localhost:8000
+
+# -- Database (wajib diisi) --
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
 DB_PORT=3306
 DB_DATABASE=classeditor
 DB_USERNAME=root
 DB_PASSWORD=
+
+# -- Broadcasting (aktifkan Reverb) --
+BROADCAST_CONNECTION=reverb
+
+# -- Queue (wajib untuk broadcast event) --
+QUEUE_CONNECTION=database
+
+# -- Laravel Reverb --
+REVERB_APP_ID=classeditor-app
+REVERB_APP_KEY=classeditor-key
+REVERB_APP_SECRET=classeditor-secret
+REVERB_HOST=localhost
+REVERB_PORT=8080
+REVERB_SCHEME=http
+
+VITE_REVERB_APP_KEY="${REVERB_APP_KEY}"
+VITE_REVERB_HOST="${REVERB_HOST}"
+VITE_REVERB_PORT="${REVERB_PORT}"
+VITE_REVERB_SCHEME="${REVERB_SCHEME}"
 ```
 
-```bash
-# 6. Jalankan migrasi & seeder
-php artisan migrate --seed
+---
 
-# 7. Build assets frontend
+### Langkah 3 — Setup Database
+
+Buat database `classeditor` di MySQL terlebih dahulu:
+
+```sql
+CREATE DATABASE classeditor CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+
+Lalu jalankan migrasi dan seeder:
+
+```bash
+php artisan migrate --seed
+```
+
+Seeder akan otomatis membuat:
+- Akun guru: `username: guru` / `password: guru1234`
+- 2 kelas: **X TJKT A** dan **X TJKT B**
+- 10 akun siswa contoh per kelas (password: `smk1234`)
+
+---
+
+### Langkah 4 — Build Frontend
+
+```bash
+# Mode development (dengan hot-reload)
 npm run dev
 
-# 8. Jalankan server
+# Atau mode production (untuk deploy)
+npm run build
+```
+
+---
+
+### Langkah 5 — Jalankan Semua Server
+
+Aplikasi ini membutuhkan **3 proses** berjalan bersamaan:
+
+| Proses | Perintah | Keterangan |
+|---|---|---|
+| Web Server | `php artisan serve` | Server utama Laravel |
+| WebSocket Server | `php artisan reverb:start` | Untuk fitur real-time monitoring |
+| Queue Worker | `php artisan queue:listen` | Untuk memproses broadcast event |
+
+**Cara 1 — Jalankan satu per satu** (buka 3 terminal terpisah):
+
+```bash
+# Terminal 1
 php artisan serve
+
+# Terminal 2
+php artisan reverb:start
+
+# Terminal 3
+php artisan queue:listen
+```
+
+**Cara 2 — Jalankan sekaligus** (1 terminal, pakai Concurrently yang sudah include di package.json):
+
+```bash
+composer run dev
 ```
 
 Buka browser di **http://localhost:8000**
@@ -122,24 +224,24 @@ Buka browser di **http://localhost:8000**
 | Role | Username | Password |
 |---|---|---|
 | Guru | `guru` | `guru1234` |
-| Siswa (contoh) | `NIS siswa` | `smk1234` |
+| Siswa (contoh) | NIS siswa | `smk1234` |
 
-> Password siswa bisa diganti sendiri setelah login.
+> Password siswa dapat diganti sendiri setelah login pertama kali.
 
 ---
 
 ## 🗂️ Struktur Database
 
 ```
-users            → id, name, username(NIS), password, role(guru|siswa), class_id
-classes          → id, name, guru_id
-assignments      → id, class_id, title, description, type(latihan|tugas),
+users            -> id, name, username(NIS), password, role(guru|siswa), class_id
+classes          -> id, name, guru_id
+assignments      -> id, class_id, title, description, type(latihan|tugas),
                    deadline, starter_html, starter_css, max_score, is_graded, status(draft|published)
-grading_criteria → id, assignment_id, type(has_tag|has_css|has_attribute|has_text),
+grading_criteria -> id, assignment_id, type(has_tag|has_css|has_attribute|has_text),
                    target, description, points
-submissions      → id, assignment_id, student_id, html_code, css_code,
+submissions      -> id, assignment_id, student_id, html_code, css_code,
                    status(draft|submitted), score, submitted_at
-activity_logs    → id, student_id, assignment_id, event(opened|tab_switch|submit|focus_lost), created_at
+activity_logs    -> id, student_id, assignment_id, event(opened|tab_switch|submit|focus_lost), created_at
 ```
 
 ---
@@ -157,13 +259,13 @@ activity_logs    → id, student_id, assignment_id, event(opened|tab_switch|subm
 ## 📁 Struktur Route
 
 ```
-/login               → Halaman login (semua role)
-/guru/dashboard      → Dashboard guru + Live CCTV
-/guru/kelas/*        → CRUD kelas
-/guru/siswa/*        → CRUD siswa (termasuk import Excel)
-/guru/tugas/*        → CRUD latihan & tugas + koreksi nilai
-/siswa/dashboard     → Daftar tugas/latihan siswa
-/siswa/editor/{id}   → Halaman live code editor
+/login               -> Halaman login (semua role)
+/guru/dashboard      -> Dashboard guru + Live CCTV
+/guru/kelas/*        -> CRUD kelas
+/guru/siswa/*        -> CRUD siswa (termasuk import Excel)
+/guru/tugas/*        -> CRUD latihan & tugas + koreksi nilai
+/siswa/dashboard     -> Daftar tugas/latihan siswa
+/siswa/editor/{id}   -> Halaman live code editor
 ```
 
 ---
@@ -177,17 +279,36 @@ activity_logs    → id, student_id, assignment_id, event(opened|tab_switch|subm
 
 ---
 
+## Troubleshooting
+
+**Fitur real-time / monitoring siswa tidak jalan:**
+- Pastikan `php artisan reverb:start` sudah berjalan
+- Pastikan `php artisan queue:listen` sudah berjalan
+- Pastikan `BROADCAST_CONNECTION=reverb` di `.env`
+- Pastikan `QUEUE_CONNECTION=database` di `.env`
+
+**Error saat migrate:**
+- Pastikan database `classeditor` sudah dibuat di MySQL
+- Pastikan `DB_CONNECTION=mysql` (bukan `sqlite`) di `.env`
+
+**Import Excel gagal:**
+- Pastikan ekstensi PHP `php_zip` dan `php_xml` aktif di `php.ini`
+- Di Laragon: klik kanan tray icon -> PHP Extensions -> centang `zip` dan `xml`
+
+---
+
 ## 📚 Referensi
 
 - [Laravel 11 Docs](https://laravel.com/docs/11.x)
+- [Laravel Reverb Docs](https://laravel.com/docs/11.x/reverb)
 - [CodeMirror 6](https://codemirror.net/)
-- [Laravel Reverb](https://laravel.com/docs/11.x/reverb)
 - [Maatwebsite Excel](https://docs.laravel-excel.com/)
-- [Tailwind CSS](https://tailwindcss.com/)
+- [Tailwind CSS v4](https://tailwindcss.com/)
+- [Alpine.js](https://alpinejs.dev/)
 
 ---
 
 ## 📄 Lisensi
 
-Project ini dibuat untuk keperluan pembelajaran di **SMKW9** dan bersifat open-source.  
+Project ini dibuat untuk keperluan pembelajaran di **SMKW9** dan bersifat open-source.
 Silakan digunakan dan dikembangkan sesuai kebutuhan.
