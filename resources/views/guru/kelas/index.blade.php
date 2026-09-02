@@ -26,11 +26,19 @@
     <div class="kelas-card-foot">
       <a href="{{ route('guru.siswa.index', $kelas) }}" class="btn btn-primary btn-sm" style="flex:1;justify-content:center">Kelola Siswa</a>
       <a href="{{ route('guru.kelas.show', $kelas) }}"  class="btn btn-secondary btn-sm" style="flex:1;justify-content:center">Detail</a>
-      <a href="{{ route('guru.kelas.edit', $kelas) }}"  class="btn btn-ghost btn-sm">
+      <a href="{{ route('guru.kelas.edit', $kelas) }}"  class="btn btn-ghost btn-sm" title="Edit Kelas">
         <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
         </svg>
       </a>
+      <form method="POST" action="{{ route('guru.kelas.destroy', $kelas) }}"  class="form-delete" data-confirm="Hapus kelas ini beserta seluruh isinya?">
+        @csrf @method('DELETE')
+        <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--red)" title="Hapus Kelas">
+          <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+          </svg>
+        </button>
+      </form>
     </div>
   </div>
   @empty
@@ -44,4 +52,15 @@
   </div>
   @endforelse
 </div>
+  @if($classes->count() > 0)
+    <div style="margin-top:20px; display:flex; justify-content:flex-end;">
+      <form method="POST" action="{{ route('guru.kelas.destroyAll') }}"  class="form-delete" data-confirm="PERINGATAN KERAS: Anda yakin ingin menghapus SEMUA KELAS beserta siswanya? Tindakan ini akan mengosongkan dasbor Anda.">
+        @csrf @method('DELETE')
+        <button type="submit" class="btn btn-danger">
+          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="margin-right:6px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+          Hapus Semua Kelas
+        </button>
+      </form>
+    </div>
+  @endif
 @endsection

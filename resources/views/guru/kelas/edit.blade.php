@@ -26,7 +26,7 @@
         <div class="form-actions">
           <button type="submit" class="btn btn-primary">Simpan Perubahan</button>
           <a href="{{ route('guru.kelas.index') }}" class="btn btn-secondary">Batal</a>
-          <form method="POST" action="{{ route('guru.kelas.destroy', $kelas) }}" onsubmit="return confirm('Hapus kelas ini?')" style="margin-left:auto">
+          <form method="POST" action="{{ route('guru.kelas.destroy', $kelas) }}"  style="margin-left:auto" class="form-delete" data-confirm="Hapus kelas ini?">
             @csrf @method('DELETE')
             <button type="submit" class="btn btn-danger btn-sm">Hapus Kelas</button>
           </form>

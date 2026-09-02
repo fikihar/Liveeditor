@@ -20,7 +20,8 @@ Route::prefix('guru')->name('guru.')->middleware(['auth', 'role:guru'])->group(f
     Route::get('/dashboard', [GuruDashboard::class, 'index'])->name('dashboard');
 
     // Manajemen kelas
-    Route::resource('kelas', ClassController::class)->except(['show']);
+    Route::delete('kelas/destroy-all', [ClassController::class, 'destroyAll'])->name('kelas.destroyAll');
+      Route::resource('kelas', ClassController::class)->except(['show']);
     Route::get('kelas/{kelas}', [ClassController::class, 'show'])->name('kelas.show');
 
     // Manajemen siswa per kelas
@@ -30,7 +31,8 @@ Route::prefix('guru')->name('guru.')->middleware(['auth', 'role:guru'])->group(f
         Route::post('/', [StudentController::class, 'store'])->name('store');
         Route::get('/{siswa}/edit', [StudentController::class, 'edit'])->name('edit');
         Route::put('/{siswa}', [StudentController::class, 'update'])->name('update');
-        Route::delete('/{siswa}', [StudentController::class, 'destroy'])->name('destroy');
+        Route::delete('/destroy-all', [StudentController::class, 'destroyAll'])->name('destroyAll');
+          Route::delete('/{siswa}', [StudentController::class, 'destroy'])->name('destroy');
         Route::post('/import', [StudentController::class, 'import'])->name('import');
     });
     // Manajemen Tugas/Latihan

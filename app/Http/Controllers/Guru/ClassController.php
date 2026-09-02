@@ -70,4 +70,13 @@ class ClassController extends Controller
     {
         abort_if($kelas->guru_id !== auth()->id(), 403, 'Akses ditolak.');
     }
+
+    public function destroyAll()
+    {
+        // Hapus semua kelas milik guru ini (Soft Delete)
+        auth()->user()->classes()->delete();
+        
+        return redirect()->route('guru.kelas.index')
+            ->with('success', "Semua kelas dan data di dalamnya berhasil dikosongkan.");
+    }
 }

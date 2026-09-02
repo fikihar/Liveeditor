@@ -30,7 +30,7 @@ class StudentController extends Controller
         $this->authorizeClass($kelas);
         $validated = $request->validate([
             'name'     => 'required|string|max:100',
-            'username' => 'required|string|max:20|unique:users,username',
+            'username' => ['required', 'string', 'max:20', \Illuminate\Validation\Rule::unique('users')->whereNull('deleted_at')],
             'password' => 'nullable|string|min:6',
         ]);
 
@@ -57,7 +57,7 @@ class StudentController extends Controller
         $this->authorizeClass($kelas);
         $validated = $request->validate([
             'name'     => 'required|string|max:100',
-            'username' => 'required|string|max:20|unique:users,username,' . $siswa->id,
+            'username' => ['required', 'string', 'max:20', \Illuminate\Validation\Rule::unique('users')->ignore($siswa->id)->whereNull('deleted_at')],
             'password' => 'nullable|string|min:6',
         ]);
 
@@ -100,5 +100,15 @@ class StudentController extends Controller
     private function authorizeClass(ClassRoom $kelas): void
     {
         abort_if($kelas->guru_id !== auth()->id(), 403, 'Akses ditolak.');
+    }
+
+    public function destroyAll(ClassRoom $kelas)
+    {
+        $this->authorizeClass($kelas);
+        // Soft delete semua siswa di kelas ini
+        $kelas->students()->delete();
+        
+        return redirect()->route('guru.siswa.index', $kelas)
+            ->with('success', "Semua data siswa di kelas {$kelas->name} berhasil dihapus.");
     }
 }

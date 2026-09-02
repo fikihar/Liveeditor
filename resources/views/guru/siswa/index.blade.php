@@ -47,7 +47,7 @@
             <div class="action-cell">
               <a href="{{ route('guru.siswa.edit', [$kelas, $siswa]) }}" class="btn btn-ghost btn-sm">Edit</a>
               <form method="POST" action="{{ route('guru.siswa.destroy', [$kelas, $siswa]) }}"
-                    onsubmit="return confirm('Hapus {{ $siswa->name }}?')">
+                     class="form-delete" data-confirm="Hapus {{ $siswa->name }}?">
                 @csrf @method('DELETE')
                 <button type="submit" class="btn btn-danger btn-sm">Hapus</button>
               </form>
