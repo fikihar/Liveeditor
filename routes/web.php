@@ -38,11 +38,13 @@ Route::prefix('guru')->name('guru.')->middleware(['auth', 'role:guru'])->group(f
     Route::resource('tugas', \App\Http\Controllers\Guru\AssignmentController::class);
     Route::get('tugas/{tuga}/koreksi/{siswa}', [\App\Http\Controllers\Guru\AssignmentController::class, 'koreksi'])->name('tugas.koreksi');
     Route::post('tugas/{tuga}/koreksi/{siswa}', [\App\Http\Controllers\Guru\AssignmentController::class, 'simpanNilai'])->name('tugas.nilai');
+    Route::post('tugas/{tuga}/force-submit', [\App\Http\Controllers\Guru\AssignmentController::class, 'forceSubmit'])->name('tugas.force_submit');
 });
 
 // Siswa routes
 Route::prefix('siswa')->name('siswa.')->middleware(['auth', 'role:siswa'])->group(function () {
     Route::get('/dashboard', [\App\Http\Controllers\Siswa\DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/riwayat', [\App\Http\Controllers\Siswa\DashboardController::class, 'history'])->name('riwayat');
     
     // Live Editor
     Route::get('/tugas/{assignment}/editor', [\App\Http\Controllers\Siswa\EditorController::class, 'show'])->name('editor.show');

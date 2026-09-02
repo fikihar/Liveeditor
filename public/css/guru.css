@@ -315,3 +315,96 @@ tbody tr:hover { background: var(--slate-50); }
 .mt-1 { margin-top: 4px; }
 .mt-4 { margin-top: 16px; }
 .action-cell { display: flex; align-items: center; gap: 6px; }
+
+/* ========== MOBILE RESPONSIVENESS ========== */
+@media (max-width: 768px) {
+    :root {
+        --sidebar-w: 240px; /* Tetap sama untuk offcanvas */
+    }
+    
+    /* Sembunyikan sidebar di kiri luar layar */
+    .sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+        box-shadow: 4px 0 15px rgba(0,0,0,0.1);
+    }
+    .sidebar.open {
+        transform: translateX(0);
+    }
+    
+    /* Topbar memanjang full */
+    .topbar {
+        left: 0;
+        padding: 0 16px;
+    }
+    
+    /* Tampilkan tombol hamburger di topbar */
+    .btn-mobile-menu {
+        display: block !important;
+        background: transparent;
+        border: none;
+        color: var(--slate-700);
+        cursor: pointer;
+        padding: 8px;
+        margin-right: 12px;
+    }
+    
+    /* Area Konten memanjang full */
+    .main-wrap {
+        margin-left: 0;
+    }
+    .main-content {
+        padding: 16px;
+    }
+    
+    /* Overlay untuk menutup sidebar */
+    .sidebar-overlay {
+        display: none;
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(15, 23, 42, 0.5);
+        backdrop-filter: blur(2px);
+        z-index: 150;
+        opacity: 0;
+        transition: opacity 0.3s;
+    }
+    .sidebar-overlay.open {
+        display: block;
+        opacity: 1;
+    }
+    
+        /* Grid 4 kolom menjadi dinamis di HP */
+    .stats-grid {
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 12px;
+    }
+    
+    /* Layout kolom koreksi di HP menjadi bersusun ke bawah */
+    .koreksi-grid {
+        grid-template-columns: 1fr !important;
+        height: auto !important;
+        gap: 16px;
+    }
+    .koreksi-col {
+        height: 500px !important;
+    }
+    
+    /* Tabel responsif - bisa di-scroll horizontal */
+    .table-responsive {
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    /* Form flex menjadi kolom di HP */
+    .form-group-flex {
+        flex-direction: column !important;
+        gap: 12px !important;
+    }
+    
+    /* Modal full screen di HP */
+    .modal {
+        width: 95%;
+        margin: 20px auto;
+    }
+}

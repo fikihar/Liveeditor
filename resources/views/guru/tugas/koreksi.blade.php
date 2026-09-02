@@ -7,11 +7,21 @@
 @endsection
 
 @section('content')
+  <style>
+    /* macOS style scrollbars untuk halaman koreksi */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.4); border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(100, 116, 139, 0.7); }
+    
+    /* Supaya textarea tidak punya outline outline kaku saat diklik */
+    textarea:focus { outline: none; }
+  </style>
 <!-- Ubah layout menjadi 3 Kolom: Panel Info (260px) | Kode (1fr) | Preview (1fr) -->
-<div style="display:grid;grid-template-columns:260px 1fr 1fr;gap:20px;height:calc(100vh - 120px);align-items:stretch;">
+<div class="koreksi-grid" style="display:grid;grid-template-columns:260px 1fr 1fr;gap:20px;height:calc(100vh - 120px);align-items:stretch;">
   
   <!-- KOLOM 1: Info Siswa & Panel Nilai -->
-  <div style="display:flex;flex-direction:column;gap:16px;overflow-y:auto;">
+  <div class="koreksi-col" style="display:flex;flex-direction:column;gap:16px;overflow-y:auto;">
     
     <div class="card" style="border-top: 4px solid var(--primary-500);">
       <div class="card-body">
@@ -44,7 +54,25 @@
             <button type="button" class="btn btn-secondary" style="width:100%;justify-content:center;padding:12px;font-size:14px;font-weight:600;" disabled>Belum Bisa Dinilai</button>
           </div>
         @else
-          <form action="{{ route('guru.tugas.nilai', [$assignment->id, $siswa->id]) }}" method="POST">
+                  @if($submission->grading_detail)
+        <div style="margin-bottom:24px;background:#f8fafc;padding:16px;border-radius:8px;border:1px solid #e2e8f0;">
+          <h4 style="font-weight:700;margin-bottom:12px;color:#334155;font-size:14px;border-bottom:1px solid #e2e8f0;padding-bottom:8px;">Hasil Auto-Grading</h4>
+          <ul style="list-style:none;padding:0;margin:0;font-size:13px;display:flex;flex-direction:column;gap:12px;">
+            @foreach(json_decode($submission->grading_detail) as $detail)
+            <li>
+              <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                <strong style="color:#0f172a;">{{ $detail->description }}</strong>
+                <span style="font-weight:700;color:{{ $detail->points_awarded > 0 ? ($detail->points_awarded == $detail->points_max ? '#16a34a' : '#d97706') : '#ef4444' }};">
+                  {{ $detail->points_awarded }} / {{ $detail->points_max }}
+                </span>
+              </div>
+              <div style="color:#64748b;">Info: {{ $detail->note }}</div>
+            </li>
+            @endforeach
+          </ul>
+        </div>
+        @endif
+            <form action="{{ route('guru.tugas.nilai', [$assignment->id, $siswa->id]) }}" method="POST">
             @csrf
             <div class="form-group" style="margin-bottom:12px;">
               <label class="form-label" style="font-weight:600;color:var(--slate-700);">Beri Nilai (0-100)</label>
@@ -59,7 +87,7 @@
   </div>
 
   <!-- KOLOM 2: Area Kode (HTML & CSS) -->
-  <div style="display:flex;flex-direction:column;gap:16px;height:100%;overflow:hidden;">
+  <div class="koreksi-col" style="display:flex;flex-direction:column;gap:16px;height:100%;overflow:hidden;">
     
     <!-- Kode HTML -->
     <div class="card" style="display:flex;flex-direction:column;flex:1;overflow:hidden;border:1px solid var(--slate-200);">
@@ -86,7 +114,7 @@
   </div>
 
   <!-- KOLOM 3: Preview Hasil -->
-  <div class="card" style="display:flex;flex-direction:column;height:100%;overflow:hidden;border:1px solid var(--slate-200);">
+  <div class="card koreksi-col" style="display:flex;flex-direction:column;height:100%;overflow:hidden;border:1px solid var(--slate-200);">
     <div class="card-header" style="background:var(--slate-50);border-bottom:1px solid var(--slate-200);padding:10px 16px;display:flex;justify-content:space-between;align-items:center;">
       <div class="card-header-title" style="font-size:14px;color:var(--slate-700);">Preview Hasil</div>
       <!-- Indikator Ukuran (Hanya Visual) -->

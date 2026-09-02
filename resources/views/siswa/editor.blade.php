@@ -5,10 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="csrf-token" content="{{ csrf_token() }}">
   <meta name="theme-color" content="#1e293b">
+  <link rel="icon" href="{{ asset('favicon.svg') }}" type="image/svg+xml">
   <title>{{ $assignment->title }} - ClassEditor</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { height: 100%; overflow: hidden; background: #1e293b; color: white; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+    html, body { height: 100%; overflow: hidden; overscroll-behavior-y: none; /* Mencegah pull-to-refresh di HP */ background: #1e293b; color: white; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
     
     .app-container { display: flex; flex-direction: column; height: 100vh; }
     
@@ -21,7 +22,7 @@
     
     /* Tabs */
     .tabs { display: flex; background: #1e293b; height: 44px; flex-shrink: 0; border-bottom: 1px solid #334155; }
-    .tab { flex: 1; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; color: #94a3b8; border-bottom: 2px solid transparent; cursor: pointer; transition: all .2s; }
+    .tab { flex: 1; touch-action: manipulation; /* Mencegah double-tap zoom di HP */ display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; color: #94a3b8; border-bottom: 2px solid transparent; cursor: pointer; transition: all .2s; }
     .tab.active { color: #60a5fa; border-bottom-color: #60a5fa; background: rgba(255,255,255,.02); }
     
     /* Content Area */
@@ -33,7 +34,25 @@
     .cm-editor { height: 100%; font-size: 14px; }
     .cm-scroller { font-family: 'SF Mono', Consolas, monospace; }
     
-    /* Iframe */
+          /* Desktop Split View */
+      @media(min-width: 768px) {
+          .tabs { display: none !important; }
+          .content-area {
+              display: grid !important;
+              grid-template-columns: 1fr 1fr;
+              grid-template-rows: {{ $assignment->has_css ? '1fr 1fr' : '1fr' }};
+          }
+          .panel { position: relative !important; display: flex !important; }
+          #panel-html { grid-column: 1; grid-row: 1; border-right: 1px solid #334155; }
+          #panel-css { grid-column: 1; grid-row: 2; border-right: 1px solid #334155; border-top: 1px solid #334155; }
+          #panel-preview { grid-column: 2; grid-row: 1 / span {{ $assignment->has_css ? '2' : '1' }}; }
+          
+          /* Panel Labels */
+          #panel-html::before { content: 'HTML'; position: absolute; top: 0; right: 0; background: rgba(0,0,0,0.5); padding: 2px 8px; font-size: 10px; color: #94a3b8; z-index: 10; border-bottom-left-radius: 6px; }
+          #panel-css::before { content: 'CSS'; position: absolute; top: 0; right: 0; background: rgba(0,0,0,0.5); padding: 2px 8px; font-size: 10px; color: #94a3b8; z-index: 10; border-bottom-left-radius: 6px; }
+      }
+      
+      /* Iframe */
     .preview-frame { width: 100%; height: 100%; border: none; background: white; }
     
     /* Anti-cheat Alert */
@@ -107,9 +126,9 @@
     </div>
 
     <div class="tabs">
-      <div class="tab active" onclick="switchTab('html')">HTML</div>
-      @if($assignment->has_css) <div class="tab" onclick="switchTab('css')">CSS</div> @endif
-      <div class="tab" onclick="switchTab('preview')" style="color:#a7f3d0">Hasil</div>
+      <div class="tab active" onclick="switchTab('html', this)">HTML</div>
+      @if($assignment->has_css) <div class="tab" onclick="switchTab('css', this)">CSS</div> @endif
+      <div class="tab" onclick="switchTab('preview', this)" style="color:#a7f3d0">Hasil</div>
     </div>
 
     <div class="content-area">
@@ -126,33 +145,50 @@
     window.getHtmlCode = () => document.getElementById('raw-html-data').value;
     window.getCssCode = () => document.getElementById('raw-css-data').value;
 
-    function switchTab(tabId) {
-      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-      
-      event.target.classList.add('active');
-      document.getElementById('panel-' + tabId).classList.add('active');
-
-      if (tabId === 'preview') {
-        const doc = document.getElementById('preview-frame').contentWindow.document;
+        function renderPreview() {
+        const frame = document.getElementById('preview-frame');
+        if (!frame) return;
+        const doc = frame.contentWindow.document;
         doc.open();
         
-        let htmlCode = window.getHtmlCode();
-        let cssCode = window.getCssCode();
+        let htmlCode = window.getHtmlCode ? window.getHtmlCode() : document.getElementById('raw-html-data').value;
+        let cssCode = window.getCssCode ? window.getCssCode() : (document.getElementById('raw-css-data') ? document.getElementById('raw-css-data').value : '');
         
-        // Simulasi External CSS: Cari tag <link rel="stylesheet" href="style.css">
-        const externalCssRegex = /<link\s+[^>]*href=["']style\.css["'][^>]*>/gi;
-        
-        // Jika siswa menuliskan link eksternalnya, kita ganti link tersebut dengan isi Tab CSS
-        if (externalCssRegex.test(htmlCode)) {
-            htmlCode = htmlCode.replace(externalCssRegex, `<style>\n${cssCode}\n</style>`);
+        if (cssCode.trim() !== '') {
+            const externalCssRegex = /<link\s+[^>]*href=["']style\.css["'][^>]*>/gi;
+            if (externalCssRegex.test(htmlCode)) {
+                htmlCode = htmlCode.replace(externalCssRegex, `<style>\n${cssCode}\n</style>`);
+            } else {
+                if (htmlCode.includes('</head>')) {
+                    htmlCode = htmlCode.replace('</head>', `<style>\n${cssCode}\n</style>\n</head>`);
+                } else {
+                    htmlCode = `<style>\n${cssCode}\n</style>\n` + htmlCode;
+                }
+            }
         }
-        // Jika tidak ditulis, Tab CSS akan diabaikan (hanya mengandalkan HTML / Inline / Internal CSS)
 
         doc.write(htmlCode);
         doc.close();
+    }
+
+    function switchTab(tabId, el) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      
+      if(el) el.classList.add('active');
+      else document.querySelector(`.tab[onclick*="${tabId}"]`).classList.add('active');
+      
+      document.getElementById('panel-' + tabId).classList.add('active');
+
+      if (tabId === 'preview') {
+          renderPreview();
       }
     }
+    
+    // Initial Render
+    window.addEventListener('DOMContentLoaded', () => {
+        setTimeout(renderPreview, 500);
+    });
 
         function resetCode() {
       document.getElementById('resetModal').classList.add('active');
@@ -267,12 +303,24 @@
         import { EditorView, basicSetup } from "https://esm.sh/codemirror@6.0.1";
     import { html } from "https://esm.sh/@codemirror/lang-html@6.0.0";
     import { css } from "https://esm.sh/@codemirror/lang-css@6.0.0";
+    
     import { oneDark } from "https://esm.sh/@codemirror/theme-one-dark@6.1.2";
 
+    
+        
+
+        
+
+    let renderTimer;
     const updateListener = EditorView.updateListener.of((update) => {
         if (update.docChanged) {
             notifyTyping();
-            if(window.getHtmlCode) { presenceChannel.whisper('code-update', { id: {{ auth()->id() }}, html: window.getHtmlCode(), css: window.getCssCode() }); }
+            if(window.getHtmlCode) { 
+                presenceChannel.whisper('code-update', { id: {{ auth()->id() }}, html: window.getHtmlCode(), css: window.getCssCode() }); 
+            }
+            // Auto-render live preview on desktop
+            clearTimeout(renderTimer);
+            renderTimer = setTimeout(renderPreview, 500);
         }
     });
 
@@ -335,5 +383,38 @@
       </div>
     </div>
   </div>
+  <script>
+    // AUTO SAVE BACKGROUND
+    let lastSavedHtml = document.getElementById('raw-html-data').value;
+    let lastSavedCss = document.getElementById('raw-css-data').value;
+    
+    setInterval(() => {
+        if (!window.getHtmlCode) return;
+        
+        let currentHtml = window.getHtmlCode();
+        let currentCss = window.getCssCode ? window.getCssCode() : '';
+        
+        if (currentHtml !== lastSavedHtml || currentCss !== lastSavedCss) {
+            let formData = new FormData();
+            formData.append('html_code', currentHtml);
+            formData.append('css_code', currentCss);
+            formData.append('action', 'save');
+            
+            fetch("{{ route('siswa.editor.submit', $assignment) }}", {
+                method: "POST",
+                headers: { 
+                    "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content,
+                    "X-Requested-With": "XMLHttpRequest"
+                },
+                body: formData
+            }).then(r => r.json()).then(res => {
+                if(res.success) {
+                    lastSavedHtml = currentHtml;
+                    lastSavedCss = currentCss;
+                }
+            });
+        }
+    }, 15000); // 15 detik
+  </script>
 </body>
 </html>

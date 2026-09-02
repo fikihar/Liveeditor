@@ -13,7 +13,7 @@ class AssignmentController extends Controller
     {
         $guruId = auth()->id();
         // Ambil semua tugas milik kelas yang diajar oleh guru ini
-        $assignments = Assignment::with(['classRoom'])
+        $assignments = Assignment::with(['classRoom' => function($q) { $q->withCount('students'); }])
             ->whereHas('classRoom', function ($q) use ($guruId) {
                 $q->where('guru_id', $guruId);
             })
@@ -31,7 +31,7 @@ class AssignmentController extends Controller
         return view('guru.tugas.create', compact('classes'));
     }
 
-    public function store(Request $request)
+        public function store(Request $request)
     {
         $validated = $request->validate([
             'class_id'     => 'required|exists:classes,id',
@@ -41,18 +41,28 @@ class AssignmentController extends Controller
             'deadline'     => 'nullable|date',
             'starter_html' => 'nullable|string',
             'starter_css'  => 'nullable|string',
-                    ]);
+            'criteria'     => 'nullable|array',
+            'criteria.*.type' => 'required|string',
+            'criteria.*.target' => 'required|string',
+            'criteria.*.value' => 'nullable|string',
+            'criteria.*.points' => 'required|integer',
+            'criteria.*.description' => 'required|string',
+        ]);
 
-        // Pastikan kelas tersebut benar-benar milik guru ini
         $kelas = ClassRoom::findOrFail($validated['class_id']);
         abort_if($kelas->guru_id != auth()->id(), 403);
 
         $validated["has_css"] = $request->has("has_css");
         $validated['status'] = 'published';
+        
         $assignment = Assignment::create($validated);
 
+        if ($request->has('criteria') && is_array($validated['criteria'])) {
+            $assignment->gradingCriteria()->createMany($validated['criteria']);
+        }
+
         return redirect()->route('guru.tugas.index')
-            ->with('success', 'Tugas/Latihan berhasil dibuat!');
+            ->with('success', 'Tugas/Latihan beserta kriteria berhasil dibuat!');
     }
 
     public function show(Assignment $tuga) // Laravel resource auto-names parameter 'tuga' (singular of tugas)
@@ -71,30 +81,62 @@ class AssignmentController extends Controller
         return view('guru.tugas.edit', ['assignment' => $tuga, 'classes' => $classes]);
     }
 
-    public function update(Request $request, Assignment $tuga)
+        public function update(Request $request, Assignment $tuga)
     {
-        $this->authorizeAssignment($tuga);
+        abort_if($tuga->classRoom->guru_id != auth()->id(), 403);
 
         $validated = $request->validate([
-            'class_id'     => 'required|exists:classes,id',
             'title'        => 'required|string|max:150',
             'description'  => 'nullable|string',
-            'type'         => 'required|in:latihan,tugas',
             'deadline'     => 'nullable|date',
             'starter_html' => 'nullable|string',
             'starter_css'  => 'nullable|string',
-                    ]);
-
-        // Pastikan kelas tujuan masih milik guru ini
-        $kelas = ClassRoom::findOrFail($validated['class_id']);
-        abort_if($kelas->guru_id != auth()->id(), 403);
+            'criteria'     => 'nullable|array',
+            'criteria.*.id' => 'nullable|exists:grading_criteria,id',
+            'criteria.*.type' => 'required|string',
+            'criteria.*.target' => 'required|string',
+            'criteria.*.value' => 'nullable|string',
+            'criteria.*.points' => 'required|integer',
+            'criteria.*.description' => 'required|string',
+        ]);
 
         $validated["has_css"] = $request->has("has_css");
-        $validated['status'] = 'published';
         $tuga->update($validated);
 
+        // Update Criteria
+        if ($request->has('criteria') && is_array($validated['criteria'])) {
+            $existingIds = collect($validated['criteria'])->pluck('id')->filter()->toArray();
+            
+            // Delete removed criteria
+            $tuga->gradingCriteria()->whereNotIn('id', $existingIds)->delete();
+
+            // Update or Create
+            foreach ($validated['criteria'] as $crit) {
+                if (!empty($crit['id'])) {
+                    $tuga->gradingCriteria()->where('id', $crit['id'])->update([
+                        'type' => $crit['type'],
+                        'target' => $crit['target'],
+                        'value' => $crit['value'],
+                        'points' => $crit['points'],
+                        'description' => $crit['description'],
+                    ]);
+                } else {
+                    $tuga->gradingCriteria()->create([
+                        'type' => $crit['type'],
+                        'target' => $crit['target'],
+                        'value' => $crit['value'],
+                        'points' => $crit['points'],
+                        'description' => $crit['description'],
+                    ]);
+                }
+            }
+        } else {
+            // Delete all if none sent
+            $tuga->gradingCriteria()->delete();
+        }
+
         return redirect()->route('guru.tugas.index')
-            ->with('success', 'Data tugas berhasil diperbarui!');
+            ->with('success', 'Info Tugas dan Kriteria berhasil diperbarui!');
     }
 
     public function destroy(Assignment $tuga)
@@ -160,5 +202,114 @@ class AssignmentController extends Controller
         $submission->save();
 
         return redirect()->route('guru.tugas.show', $tuga)->with('success', 'Nilai untuk ' . $siswa->name . ' berhasil disimpan!');
+    }
+
+    public function forceSubmit(Assignment $tuga)
+    {
+        $guru = auth()->user();
+        abort_if($tuga->classRoom->guru_id != $guru->id, 403);
+        
+        $students = $tuga->classRoom->students;
+        $count = 0;
+        
+        foreach ($students as $siswa) {
+            $submission = \App\Models\Submission::firstOrCreate([
+                'assignment_id' => $tuga->id,
+                'student_id'    => $siswa->id
+            ]);
+            
+            if ($submission->status !== 'submitted') {
+                $submission->status = 'submitted';
+                $submission->submitted_at = now();
+                
+                // AUTO-GRADING
+                $criteria = $tuga->gradingCriteria;
+                if ($criteria && $criteria->count() > 0) {
+                    $totalScore = 0;
+                    $details = [];
+                    $html = $submission->html_code ?? '';
+                    $css = $submission->css_code ?? '';
+                    $voidTags = ['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr'];
+
+                    foreach ($criteria as $crit) {
+                        $point_awarded = 0;
+                        $note = 'Tidak memenuhi kriteria.';
+                        $target = preg_quote($crit->target, '/');
+
+                        if ($crit->type === 'has_tag') {
+                            if (preg_match('/<' . $target . '\b[^>]*>/i', $html)) {
+                                if (in_array(strtolower($crit->target), $voidTags)) {
+                                    $point_awarded = $crit->points;
+                                    $note = 'Berhasil (Tag lengkap).';
+                                } else {
+                                    if (preg_match('/<\/' . $target . '\s*>/i', $html)) {
+                                        $point_awarded = $crit->points;
+                                        $note = 'Berhasil (Tag pembuka & penutup lengkap).';
+                                    } else {
+                                        $point_awarded = floor($crit->points / 2);
+                                        $note = 'Kurang tepat (Ada pembuka, tapi tidak ada penutup). Poin dipotong 50%.';
+                                    }
+                                }
+                            } else {
+                                $note = 'Gagal: ' . $crit->description;
+                            }
+                        } 
+                        elseif ($crit->type === 'has_attribute') {
+                            $val = $crit->value ? preg_quote($crit->value, '/') : '';
+                            if (preg_match('/<' . $target . '\b[^>]*' . $val . '[^>]*>/i', $html)) {
+                                $point_awarded = $crit->points;
+                                $note = 'Berhasil memenuhi atribut.';
+                            } else {
+                                $note = 'Gagal: ' . $crit->description;
+                            }
+                        } 
+                        elseif ($crit->type === 'has_text') {
+                            $searchVal = $crit->value ?: $crit->target;
+                            if (stripos($html, $searchVal) !== false) {
+                                $point_awarded = $crit->points;
+                                $note = 'Berhasil (Teks ditemukan).';
+                            } else {
+                                $note = 'Gagal: ' . $crit->description;
+                            }
+                        } 
+                        elseif ($crit->type === 'has_css') {
+                            $cleanCss = preg_replace('/\s+/', '', $css);
+                            $cleanTarget = preg_replace('/\s+/', '', $crit->target);
+                            $cleanValue = $crit->value ? preg_replace('/\s+/', '', $crit->value) : '';
+                            $regex = '/' . preg_quote($cleanTarget, '/') . '\{[^}]*' . preg_quote($cleanValue, '/') . '[^}]*\}/i';
+                            if (preg_match($regex, $cleanCss)) {
+                                $point_awarded = $crit->points;
+                                $note = 'Berhasil menerapkan CSS.';
+                            } else {
+                                $note = 'Gagal: ' . $crit->description;
+                            }
+                        }
+
+                        $totalScore += $point_awarded;
+                        $details[] = [
+                            'type' => $crit->type,
+                            'target' => $crit->target,
+                            'description' => $crit->description,
+                            'points_max' => $crit->points,
+                            'points_awarded' => $point_awarded,
+                            'note' => $note
+                        ];
+                    }
+
+                    $maxPossible = $criteria->sum('points');
+                    if ($maxPossible > 0) {
+                        $submission->score = round(($totalScore / $maxPossible) * 100);
+                    } else {
+                        $submission->score = 0;
+                    }
+                    $submission->grading_detail = json_encode($details);
+                }
+                
+                $submission->save();
+                $count++;
+            }
+        }
+        
+        return back()->with('success', "Berhasil menarik paksa (Force Submit) $count tugas siswa yang belum dikumpulkan.");
     }
 }

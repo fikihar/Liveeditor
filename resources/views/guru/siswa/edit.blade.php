@@ -33,6 +33,7 @@
           <label class="form-label">Password Baru</label>
           <input type="text" name="password" class="form-input" placeholder="Kosongkan jika tidak diubah">
           <div class="form-hint">Biarkan kosong jika password tidak ingin diubah</div>
+          @error('password')<div class="form-error-msg" style="color:var(--red);font-size:0.8rem;margin-top:4px;">{{ $message }}</div>@enderror
         </div>
         <div class="form-actions">
           <button type="submit" class="btn btn-primary">Simpan Perubahan</button>

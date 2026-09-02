@@ -17,7 +17,7 @@ class DatabaseSeeder extends Seeder
             'username' => 'guru',
             'email'    => 'guru@classeditor.smk',
             'role'     => 'guru',
-            'password' => Hash::make('guru1234'),
+            'password' => 'guru1234',
         ]);
 
         // Buat 2 kelas
@@ -48,7 +48,7 @@ class DatabaseSeeder extends Seeder
                 'username' => $siswa['username'],
                 'role'     => 'siswa',
                 'class_id' => $kelasA->id,
-                'password' => Hash::make('smk1234'),
+                'password' => 'smk1234',
             ]);
         }
 
@@ -67,7 +67,7 @@ class DatabaseSeeder extends Seeder
                 'username' => $siswa['username'],
                 'role'     => 'siswa',
                 'class_id' => $kelasB->id,
-                'password' => Hash::make('smk1234'),
+                'password' => 'smk1234',
             ]);
         }
 

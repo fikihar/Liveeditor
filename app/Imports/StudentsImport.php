@@ -35,7 +35,7 @@ class StudentsImport implements ToModel, WithHeadingRow, SkipsOnError
         return new User([
             'name'     => $row['nama'],
             'username' => (string) $row['nis'],
-            'password' => Hash::make($row['password'] ?? 'smk1234'),
+            'password' => $row['password'] ?? 'smk1234',
             'role'     => 'siswa',
             'class_id' => $this->classId,
         ]);

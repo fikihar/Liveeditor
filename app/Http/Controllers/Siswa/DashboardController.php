@@ -21,4 +21,20 @@ class DashboardController extends Controller
 
         return view('siswa.dashboard', compact('assignments', 'siswa'));
     }
+
+    public function history()
+    {
+        $siswa = auth()->user();
+        $kelasId = $siswa->class_id;
+
+        $assignments = \App\Models\Assignment::published()
+            ->where('class_id', $kelasId)
+            ->with(['submissions' => function ($q) use ($siswa) {
+                $q->where('student_id', $siswa->id);
+            }])
+            ->latest()
+            ->get();
+
+        return view('siswa.history', compact('siswa', 'assignments'));
+    }
 }

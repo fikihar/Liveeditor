@@ -18,7 +18,8 @@
     </div>
   </div>
   <div class="table-wrap" style="border:none;border-radius:0">
-    <table>
+    <div class="table-responsive">
+        <table>
       <thead>
         <tr>
           <th style="width:48px">#</th>
@@ -67,6 +68,7 @@
         @endforelse
       </tbody>
     </table>
+      </div>
   </div>
 </div>
 

@@ -37,7 +37,7 @@ class StudentController extends Controller
         User::create([
             'name'     => $validated['name'],
             'username' => $validated['username'],
-            'password' => Hash::make($validated['password'] ?? 'smk1234'),
+            'password' => $validated['password'] ?? 'smk1234',
             'role'     => 'siswa',
             'class_id' => $kelas->id,
         ]);
@@ -64,7 +64,7 @@ class StudentController extends Controller
         $siswa->name     = $validated['name'];
         $siswa->username = $validated['username'];
         if (!empty($validated['password'])) {
-            $siswa->password = Hash::make($validated['password']);
+            $siswa->password = $validated['password'];
         }
         $siswa->save();
 

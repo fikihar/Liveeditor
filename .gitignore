@@ -22,3 +22,12 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Agent & AI Tools
+.agents/
+.gemini/
+GEMINI.md
+implementation_plan.md
+walkthrough.md
+task.md
+scratch/

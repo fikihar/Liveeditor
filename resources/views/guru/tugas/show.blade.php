@@ -6,7 +6,11 @@
     <div style="display:flex;gap:8px;align-items:center;">
       <a href="{{ route('guru.tugas.index') }}" class="btn btn-secondary btn-sm">Kembali</a>
       <a href="{{ route('guru.kelas.show', $assignment->class_id) }}" class="btn btn-ghost btn-sm">Lihat Kelas</a>
-      <a href="{{ route('guru.tugas.edit', $assignment) }}" class="btn btn-secondary btn-sm">Edit Info</a>
+              <a href="{{ route('guru.tugas.edit', $assignment) }}" class="btn btn-secondary btn-sm">Edit Info</a>
+        <form id="forceSubmitForm" action="{{ route('guru.tugas.force_submit', $assignment) }}" method="POST" style="display:inline;">
+          @csrf
+          <button type="button" onclick="confirmForceSubmit()" class="btn btn-primary btn-sm" style="background:#ef4444;border-color:#ef4444;">Tarik Paksa (Force Submit)</button>
+        </form>
     </div>
 @endsection
 
@@ -338,5 +342,23 @@
               if (cssEl) cssEl.textContent = e.css;
           }
       });
+</script>
+  <script>
+  function confirmForceSubmit() {
+      Swal.fire({
+          title: 'Tarik Paksa Tugas?',
+          text: "Semua tugas siswa yang masih Draft akan diubah menjadi Dikumpulkan dan dinilai otomatis (Auto-Grading). Tindakan ini tidak bisa dibatalkan!",
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonColor: '#ef4444',
+          cancelButtonColor: '#64748b',
+          confirmButtonText: 'Ya, Tarik Paksa!',
+          cancelButtonText: 'Batal'
+      }).then((result) => {
+          if (result.isConfirmed) {
+              document.getElementById('forceSubmitForm').submit();
+          }
+      });
+  }
 </script>
 @endsection

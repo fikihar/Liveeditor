@@ -20,7 +20,8 @@
     </div>
   </div>
   <div class="table-wrap" style="border:none;border-radius:0">
-    <table>
+    <div class="table-responsive">
+        <table>
       <thead>
         <tr>
           <th>Soal</th>
@@ -52,15 +53,28 @@
               @endif
 
               @if($tugas->status === 'published')
-                <span class="badge badge-green">Dipublikasi</span>
+                  @if($tugas->deadline && now()->gt($tugas->deadline))
+                      <span class="badge badge-gray" style="background:#e2e8f0;color:#64748b;">Ditutup</span>
+                  @else
+                      <span class="badge badge-green">Aktif</span>
+                  @endif
               @else
                 <span class="badge badge-gray">Draft</span>
               @endif
             </div>
           </td>
           <td>
-            <span class="fw-600" style="color:var(--blue)">{{ $tugas->submissions_count }}</span>
-            <span class="text-muted">siswa</span>
+            <div style="display:flex;align-items:center;gap:4px;">
+              <span class="fw-600" style="color:var(--blue)">{{ $tugas->submissions_count }}</span>
+              <span class="text-muted" style="font-size:0.8rem;">/ {{ $tugas->classRoom?->students_count ?? 0 }} siswa</span>
+            </div>
+            <!-- Progress bar kecil -->
+            @php 
+               $pct = $tugas->classRoom?->students_count > 0 ? round(($tugas->submissions_count / $tugas->classRoom->students_count) * 100) : 0;
+            @endphp
+            <div style="width:100%;height:4px;background:#e2e8f0;border-radius:2px;margin-top:6px;overflow:hidden;">
+               <div style="height:100%;background:{{ $pct == 100 ? '#22c55e' : 'var(--blue)' }};width:{{ $pct }}%;"></div>
+            </div>
           </td>
           <td>
             @if($tugas->deadline)
@@ -96,6 +110,7 @@
         @endforelse
       </tbody>
     </table>
+      </div>
   </div>
 </div>
 @endsection
