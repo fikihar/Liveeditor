@@ -121,9 +121,26 @@ class EditorController extends Controller
                         }
                     } 
                     elseif ($crit->type === 'has_attribute') {
+                        $attrOrTag = preg_quote($crit->target, '/');
                         $val = $crit->value ? preg_quote($crit->value, '/') : '';
-                        // Cari tag target yang memiliki attribute value tersebut
-                        if (preg_match('/<' . $target . '\b[^>]*' . $val . '[^>]*>/i', $html)) {
+                        
+                        $isMatch = false;
+                        // Skenario A: Target adalah nama Tag (misal: target='img', value='width="150"')
+                        if (preg_match('/<' . $attrOrTag . '\b[^>]*' . $val . '[^>]*>/i', $html)) {
+                            $isMatch = true;
+                        }
+                        // Skenario B: Target adalah nama Atribut (misal: target='width', value='150', atau target='alt')
+                        elseif ($val !== '') {
+                            if (preg_match('/\b' . $attrOrTag . '\s*=\s*["\']?' . $val . '["\']?/i', $html)) {
+                                $isMatch = true;
+                            }
+                        } else {
+                            if (preg_match('/\b' . $attrOrTag . '\b/i', $html)) {
+                                $isMatch = true;
+                            }
+                        }
+
+                        if ($isMatch) {
                             $point_awarded = $crit->points;
                             $note = 'Berhasil memenuhi atribut.';
                         } else {
