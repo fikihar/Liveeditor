@@ -129,19 +129,52 @@
 
 <script>
   window.addEventListener('DOMContentLoaded', () => {
-      const doc = document.getElementById('preview-frame').contentWindow.document;
-      doc.open();
-      
+      let frame = document.getElementById('preview-frame');
+      if (!frame) return;
+
       let htmlCode = {!! json_encode($submission->html_code ?? '') !!};
       let cssCode = {!! json_encode($submission->css_code ?? '') !!};
       
       const externalCssRegex = /<link\s+[^>]*href=["']style\.css["'][^>]*>/gi;
       if (externalCssRegex.test(htmlCode)) {
           htmlCode = htmlCode.replace(externalCssRegex, `<style>\n${cssCode}\n</style>`);
+      } else if (cssCode.trim() !== '') {
+          if (htmlCode.includes('</head>')) {
+              htmlCode = htmlCode.replace('</head>', `<style>\n${cssCode}\n</style>\n</head>`);
+          } else {
+              htmlCode = `<style>\n${cssCode}\n</style>\n` + htmlCode;
+          }
+      }
+
+      // Sisipkan meta referrer no-referrer agar gambar eksternal tidak terblokir
+      if (!htmlCode.includes('name="referrer"') && !htmlCode.includes("name='referrer'")) {
+          const metaReferrer = '<meta name="referrer" content="no-referrer">';
+          if (htmlCode.includes('<head>')) {
+              htmlCode = htmlCode.replace('<head>', `<head>\n${metaReferrer}`);
+          } else {
+              htmlCode = metaReferrer + '\n' + htmlCode;
+          }
       }
       
-      doc.write(htmlCode);
-      doc.close();
+      try {
+          const doc = frame.contentWindow.document;
+          doc.open();
+          doc.write(htmlCode);
+          doc.close();
+
+          doc.addEventListener('click', (e) => {
+              const a = e.target.closest('a');
+              if (a && a.href) {
+                  const href = a.getAttribute('href') || '';
+                  if (!href.startsWith('#') && !href.startsWith('javascript:')) {
+                      e.preventDefault();
+                      window.open(a.href, '_blank', 'noopener,noreferrer');
+                  }
+              }
+          });
+      } catch (err) {
+          console.warn('Gagal memuat preview siswa:', err);
+      }
   });
 </script>
 @endsection

@@ -136,109 +136,18 @@
 </div>
 
 <!-- Reverb Echo Client -->
-<script src="https://js.pusher.com/8.3.0/pusher.min.js">  window.studentCodes = {};
-  
-  function openLiveView(studentId, studentName) {
-      if(!window.studentCodes[studentId]) return;
-      let data = window.studentCodes[studentId];
-      Swal.fire({
-          title: 'Live CCTV: ' + studentName,
-          html: `
-            <div style="text-align:left;">
-              <div style="font-weight:600;font-size:12px;color:#ef4444;margin-bottom:4px;">HTML Code</div>
-              <pre id="cctv-html" style="background:#1e293b;color:#f8fafc;padding:12px;border-radius:6px;font-size:12px;overflow-x:auto;max-height:200px;">${data.html.replace(/</g, '&lt;')}</pre>
-              <div style="font-weight:600;font-size:12px;color:#3b82f6;margin-top:12px;margin-bottom:4px;">CSS Code</div>
-              <pre id="cctv-css" style="background:#1e293b;color:#f8fafc;padding:12px;border-radius:6px;font-size:12px;overflow-x:auto;max-height:150px;">${data.css.replace(/</g, '&lt;')}</pre>
-            </div>
-          `,
-          width: 600,
-          showConfirmButton: false,
-          showCloseButton: true,
-          didOpen: () => {
-              // Simpan id modal aktif
-              window.activeCctvStudent = studentId;
-          },
-          willClose: () => {
-              window.activeCctvStudent = null;
-          }
-      });
-  }
-
-  // Bind code-update event
-  Echo.join(`assignment.{{ $assignment->id }}`)
-      .listenForWhisper('code-update', (e) => {
-          let studentId = e.id || (e.user ? e.user.id : null);
-          if (!studentId) return;
-          
-          const btn = document.getElementById('cctv-btn-' + studentId);
-          if (btn) btn.style.display = 'inline-block';
-          
-          window.studentCodes[studentId] = { html: e.html, css: e.css };
-          
-          if (window.activeCctvStudent == studentId) {
-              const htmlEl = document.getElementById('cctv-html');
-              const cssEl = document.getElementById('cctv-css');
-              if (htmlEl) htmlEl.textContent = e.html;
-              if (cssEl) cssEl.textContent = e.css;
-          }
-      });
-</script>
-<script src="https://cdn.jsdelivr.net/npm/laravel-echo@1.16.1/dist/echo.iife.js">  window.studentCodes = {};
-  
-  function openLiveView(studentId, studentName) {
-      if(!window.studentCodes[studentId]) return;
-      let data = window.studentCodes[studentId];
-      Swal.fire({
-          title: 'Live CCTV: ' + studentName,
-          html: `
-            <div style="text-align:left;">
-              <div style="font-weight:600;font-size:12px;color:#ef4444;margin-bottom:4px;">HTML Code</div>
-              <pre id="cctv-html" style="background:#1e293b;color:#f8fafc;padding:12px;border-radius:6px;font-size:12px;overflow-x:auto;max-height:200px;">${data.html.replace(/</g, '&lt;')}</pre>
-              <div style="font-weight:600;font-size:12px;color:#3b82f6;margin-top:12px;margin-bottom:4px;">CSS Code</div>
-              <pre id="cctv-css" style="background:#1e293b;color:#f8fafc;padding:12px;border-radius:6px;font-size:12px;overflow-x:auto;max-height:150px;">${data.css.replace(/</g, '&lt;')}</pre>
-            </div>
-          `,
-          width: 600,
-          showConfirmButton: false,
-          showCloseButton: true,
-          didOpen: () => {
-              // Simpan id modal aktif
-              window.activeCctvStudent = studentId;
-          },
-          willClose: () => {
-              window.activeCctvStudent = null;
-          }
-      });
-  }
-
-  // Bind code-update event
-  Echo.join(`assignment.{{ $assignment->id }}`)
-      .listenForWhisper('code-update', (e) => {
-          let studentId = e.id || (e.user ? e.user.id : null);
-          if (!studentId) return;
-          
-          const btn = document.getElementById('cctv-btn-' + studentId);
-          if (btn) btn.style.display = 'inline-block';
-          
-          window.studentCodes[studentId] = { html: e.html, css: e.css };
-          
-          if (window.activeCctvStudent == studentId) {
-              const htmlEl = document.getElementById('cctv-html');
-              const cssEl = document.getElementById('cctv-css');
-              if (htmlEl) htmlEl.textContent = e.html;
-              if (cssEl) cssEl.textContent = e.css;
-          }
-      });
-</script>
+<script src="https://js.pusher.com/8.3.0/pusher.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/laravel-echo@1.16.1/dist/echo.iife.js"></script>
 <script>
   window.Pusher = Pusher;
+  const isHttps = window.location.protocol === 'https:';
   window.Echo = new Echo({
       broadcaster: 'reverb',
       key: '{{ env("REVERB_APP_KEY") }}',
-      wsHost: window.location.hostname,
+      wsHost: '{{ env("VITE_REVERB_HOST") }}' || window.location.hostname,
       wsPort: {{ env("REVERB_PORT", 8080) }},
-      wssPort: {{ env("REVERB_PORT", 8080) }},
-      forceTLS: false,
+      wssPort: isHttps ? 443 : {{ env("REVERB_PORT", 8080) }},
+      forceTLS: isHttps,
       enabledTransports: ['ws', 'wss'],
   });
 
@@ -267,12 +176,28 @@
       if(cheatEl && dot) {
           cheatEl.style.display = e.cheating ? 'inline' : 'none';
           if(e.cheating) {
-              dot.style.background = '#f59e0b'; // Ubah titik jadi orange/kuning
+              dot.style.background = '#f59e0b';
               dot.style.boxShadow = '0 0 6px #f59e0b';
           } else {
-              dot.style.background = ''; // Kembalikan ke hijau (CSS default)
+              dot.style.background = '';
               dot.style.boxShadow = '';
           }
+      }
+  })
+  .listenForWhisper('code-update', (e) => {
+      let studentId = e.id || (e.user ? e.user.id : null);
+      if (!studentId) return;
+      
+      const btn = document.getElementById('cctv-btn-' + studentId);
+      if (btn) btn.style.display = 'inline-block';
+      
+      window.studentCodes[studentId] = { html: e.html, css: e.css };
+      
+      if (window.activeCctvStudent == studentId) {
+          const htmlEl = document.getElementById('cctv-html');
+          const cssEl = document.getElementById('cctv-css');
+          if (htmlEl) htmlEl.textContent = e.html;
+          if (cssEl) cssEl.textContent = e.css;
       }
   });
 
@@ -296,6 +221,7 @@
           if(typingEl) typingEl.style.display = 'none';
       }
   }
+
   window.studentCodes = {};
   
   function openLiveView(studentId, studentName) {
@@ -315,7 +241,6 @@
           showConfirmButton: false,
           showCloseButton: true,
           didOpen: () => {
-              // Simpan id modal aktif
               window.activeCctvStudent = studentId;
           },
           willClose: () => {
@@ -324,26 +249,6 @@
       });
   }
 
-  // Bind code-update event
-  Echo.join(`assignment.{{ $assignment->id }}`)
-      .listenForWhisper('code-update', (e) => {
-          let studentId = e.id || (e.user ? e.user.id : null);
-          if (!studentId) return;
-          
-          const btn = document.getElementById('cctv-btn-' + studentId);
-          if (btn) btn.style.display = 'inline-block';
-          
-          window.studentCodes[studentId] = { html: e.html, css: e.css };
-          
-          if (window.activeCctvStudent == studentId) {
-              const htmlEl = document.getElementById('cctv-html');
-              const cssEl = document.getElementById('cctv-css');
-              if (htmlEl) htmlEl.textContent = e.html;
-              if (cssEl) cssEl.textContent = e.css;
-          }
-      });
-</script>
-  <script>
   function confirmForceSubmit() {
       Swal.fire({
           title: 'Tarik Paksa Tugas?',

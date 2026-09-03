@@ -145,12 +145,22 @@
     window.getHtmlCode = () => document.getElementById('raw-html-data').value;
     window.getCssCode = () => document.getElementById('raw-css-data').value;
 
-        function renderPreview() {
-        const frame = document.getElementById('preview-frame');
+    function renderPreview() {
+        let frame = document.getElementById('preview-frame');
         if (!frame) return;
-        const doc = frame.contentWindow.document;
-        doc.open();
-        
+
+        // Pulihkan iframe jika sebelumnya sempat teralihkan (cross-origin crash)
+        try {
+            const testDoc = frame.contentWindow.document;
+            if (!testDoc) throw new Error('No document');
+        } catch (e) {
+            const newFrame = document.createElement('iframe');
+            newFrame.id = 'preview-frame';
+            newFrame.className = 'preview-frame';
+            frame.parentNode.replaceChild(newFrame, frame);
+            frame = newFrame;
+        }
+
         let htmlCode = window.getHtmlCode ? window.getHtmlCode() : document.getElementById('raw-html-data').value;
         let cssCode = window.getCssCode ? window.getCssCode() : (document.getElementById('raw-css-data') ? document.getElementById('raw-css-data').value : '');
         
@@ -167,8 +177,37 @@
             }
         }
 
-        doc.write(htmlCode);
-        doc.close();
+        // Sisipkan meta referrer no-referrer agar pemanggilan gambar eksternal tidak diblokir hotlink protection
+        if (!htmlCode.includes('name="referrer"') && !htmlCode.includes("name='referrer'")) {
+            const metaReferrer = '<meta name="referrer" content="no-referrer">';
+            if (htmlCode.includes('<head>')) {
+                htmlCode = htmlCode.replace('<head>', `<head>\n${metaReferrer}`);
+            } else {
+                htmlCode = metaReferrer + '\n' + htmlCode;
+            }
+        }
+
+        try {
+            const doc = frame.contentWindow.document;
+            doc.open();
+            doc.write(htmlCode);
+            doc.close();
+
+            // Cegah link merusak iframe preview (seperti Instagram/Google yang menerapkan X-Frame-Options: DENY)
+            // Alihkan link eksternal agar terbuka aman di tab baru
+            doc.addEventListener('click', (e) => {
+                const a = e.target.closest('a');
+                if (a && a.href) {
+                    const href = a.getAttribute('href') || '';
+                    if (!href.startsWith('#') && !href.startsWith('javascript:')) {
+                        e.preventDefault();
+                        window.open(a.href, '_blank', 'noopener,noreferrer');
+                    }
+                }
+            });
+        } catch (err) {
+            console.warn('Gagal merender preview:', err);
+        }
     }
 
     function switchTab(tabId, el) {
@@ -271,13 +310,14 @@
   <script src="https://cdn.jsdelivr.net/npm/laravel-echo@1.16.1/dist/echo.iife.js"></script>
   <script>
     window.Pusher = Pusher;
+    const isHttps = window.location.protocol === 'https:';
     window.Echo = new Echo({
         broadcaster: 'reverb',
         key: '{{ env("REVERB_APP_KEY") }}',
-        wsHost: window.location.hostname,
+        wsHost: '{{ env("VITE_REVERB_HOST") }}' || window.location.hostname,
         wsPort: {{ env("REVERB_PORT", 8080) }},
-        wssPort: {{ env("REVERB_PORT", 8080) }},
-        forceTLS: false,
+        wssPort: isHttps ? 443 : {{ env("REVERB_PORT", 8080) }},
+        forceTLS: isHttps,
         enabledTransports: ['ws', 'wss'],
     });
 
