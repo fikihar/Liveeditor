@@ -13,13 +13,14 @@
 
 @section('content')
 <style>
-  .tab-btn { background:none; border:none; padding:12px 16px; color:#64748b; font-weight:600; cursor:pointer; font-size:0.875rem; border-bottom:2px solid transparent; transition:all 0.2s; margin-right:8px; }
-  .tab-btn:hover { color:#0f172a; }
-  .tab-btn.active { color:#3b82f6; border-bottom-color:#3b82f6; }
+  .tabs-container { display:flex; gap:8px; padding:0 20px 16px 20px; border-bottom:1px solid #e2e8f0; margin-bottom:0; align-items:center; }
+  .tab-btn { background:transparent; border:none; padding:8px 16px; color:#64748b; font-weight:600; cursor:pointer; font-size:0.875rem; border-radius:9999px; transition:all 0.2s ease; }
+  .tab-btn:hover:not(.active) { background:#f1f5f9; color:#334155; }
+  .tab-btn.active { background:#eff6ff; color:#2563eb; }
 </style>
 
 <div class="card">
-  <div class="card-header" style="border-bottom: none; padding-bottom: 0;">
+  <div class="card-header" style="border-bottom: none; padding-bottom: 12px;">
     <div>
       <div class="card-header-title">Daftar Tugas & Latihan</div>
       <div class="card-header-sub">Pantau soal dan pengumpulan siswa</div>
@@ -27,7 +28,7 @@
   </div>
   
   <!-- Tabs -->
-  <div style="border-bottom: 1px solid #e2e8f0; padding: 0 20px 0 16px; margin-bottom: 0;">
+  <div class="tabs-container">
     <button class="tab-btn active" onclick="filterTable('semua', this)">Semua</button>
     <button class="tab-btn" onclick="filterTable('tugas', this)">Tugas (Dinilai)</button>
     <button class="tab-btn" onclick="filterTable('latihan', this)">Latihan (Bebas)</button>
