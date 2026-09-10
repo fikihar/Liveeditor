@@ -38,6 +38,7 @@ Route::prefix('guru')->name('guru.')->middleware(['auth', 'role:guru'])->group(f
     // Manajemen Tugas/Latihan
         // Manajemen Tugas/Latihan
     Route::resource('tugas', \App\Http\Controllers\Guru\AssignmentController::class);
+    Route::get('tugas/{tuga}/export', [\App\Http\Controllers\Guru\AssignmentController::class, 'export'])->name('tugas.export');
     Route::get('tugas/{tuga}/koreksi/{siswa}', [\App\Http\Controllers\Guru\AssignmentController::class, 'koreksi'])->name('tugas.koreksi');
     Route::post('tugas/{tuga}/koreksi/{siswa}', [\App\Http\Controllers\Guru\AssignmentController::class, 'simpanNilai'])->name('tugas.nilai');
     Route::post('tugas/{tuga}/force-submit', [\App\Http\Controllers\Guru\AssignmentController::class, 'forceSubmit'])->name('tugas.force_submit');

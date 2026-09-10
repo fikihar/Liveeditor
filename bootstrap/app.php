@@ -18,5 +18,10 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        //
+        $exceptions->renderable(function (\Illuminate\Session\TokenMismatchException $e, $request) {
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json(['message' => 'CSRF token mismatch.', 'success' => false], 419);
+            }
+            return redirect()->back()->with('error', 'Sesi Anda telah habis. Halaman telah disegarkan ulang, silakan coba lagi (Ketikkan sesuatu agar tersimpan).');
+        });
     })->create();

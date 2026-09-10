@@ -330,4 +330,16 @@ class AssignmentController extends Controller
         
         return back()->with('success', "Berhasil menarik paksa (Force Submit) $count tugas siswa yang belum dikumpulkan.");
     }
+
+    public function export(\App\Models\Assignment $tuga)
+    {
+        $this->authorizeAssignment($tuga);
+        
+        $fileName = 'Nilai_Tugas_' . \Illuminate\Support\Str::slug($tuga->title) . '_' . date('Ymd_His') . '.xlsx';
+        
+        return \Maatwebsite\Excel\Facades\Excel::download(
+            new \App\Exports\GradesExport($tuga->id), 
+            $fileName
+        );
+    }
 }

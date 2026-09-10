@@ -251,26 +251,96 @@
       document.getElementById('submitModal').classList.remove('active');
     }
 
-    function confirmSubmit() {
-        isNavigating = true;
+    async function confirmSubmit() {
+      isNavigating = true;
       const btn = document.querySelector('.btn-confirm');
+      const originalText = btn.innerHTML;
       btn.innerHTML = '<svg class="spinner" viewBox="0 0 24 24"><circle class="path" cx="12" cy="12" r="10" fill="none" stroke-width="4"></circle></svg> Mengirim...';
       btn.style.opacity = '0.8';
       btn.style.pointerEvents = 'none';
 
-      document.getElementById('inputHtml').value = window.getHtmlCode();
-      document.getElementById('inputCss').value = window.getCssCode();
-      document.getElementById('inputAction').value = 'submit';
-      document.getElementById('editorForm').submit();
+      let formData = new FormData();
+      formData.append('html_code', window.getHtmlCode());
+      formData.append('css_code', window.getCssCode());
+      formData.append('action', 'submit');
+
+      try {
+          const res = await fetch("{{ route('siswa.editor.submit', $assignment) }}", {
+              method: "POST",
+              headers: { 
+                  "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content,
+                  "X-Requested-With": "XMLHttpRequest"
+              },
+              body: formData
+          });
+          
+          if (res.status === 419) {
+              alert("Sesi Anda habis. Halaman akan disegarkan ulang untuk memulihkan sesi. Kode Anda AMAN di editor, silakan klik Kumpulkan lagi setelah refresh.");
+              localStorage.setItem('backupHtml_' + {{ $assignment->id }}, window.getHtmlCode());
+              localStorage.setItem('backupCss_' + {{ $assignment->id }}, window.getCssCode());
+              window.location.reload();
+              return;
+          }
+          
+          if (res.ok) {
+              window.location.href = "{{ route('siswa.dashboard') }}";
+          } else {
+              alert("Gagal mengirim tugas. Silakan coba lagi.");
+              btn.innerHTML = originalText;
+              btn.style.opacity = '1';
+              btn.style.pointerEvents = 'auto';
+          }
+      } catch (e) {
+          alert("Gagal koneksi ke server.");
+          btn.innerHTML = originalText;
+          btn.style.opacity = '1';
+          btn.style.pointerEvents = 'auto';
+      }
     }
 
-    function saveDraft(e) {
-        isNavigating = true;
+    async function saveDraft(e) {
       e.preventDefault();
-      document.getElementById('inputHtml').value = window.getHtmlCode();
-      document.getElementById('inputCss').value = window.getCssCode();
-      document.getElementById('inputAction').value = 'save';
-      document.getElementById('editorForm').submit();
+      isNavigating = true;
+      const btn = e.target;
+      const originalText = btn.innerHTML;
+      btn.innerHTML = '<svg class="spinner" viewBox="0 0 24 24"><circle class="path" cx="12" cy="12" r="10" fill="none" stroke-width="4"></circle></svg> Menyimpan...';
+      btn.style.pointerEvents = 'none';
+
+      let formData = new FormData();
+      formData.append('html_code', window.getHtmlCode());
+      formData.append('css_code', window.getCssCode());
+      formData.append('action', 'save');
+
+      try {
+          const res = await fetch("{{ route('siswa.editor.submit', $assignment) }}", {
+              method: "POST",
+              headers: { 
+                  "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content,
+                  "X-Requested-With": "XMLHttpRequest"
+              },
+              body: formData
+          });
+          
+          if (res.status === 419) {
+              alert("Sesi habis. Halaman akan disegarkan otomatis. Kode Anda AMAN, klik Simpan lagi nanti.");
+              localStorage.setItem('backupHtml_' + {{ $assignment->id }}, window.getHtmlCode());
+              localStorage.setItem('backupCss_' + {{ $assignment->id }}, window.getCssCode());
+              window.location.reload();
+              return;
+          }
+          
+          if (res.ok) {
+              window.location.href = "{{ route('siswa.dashboard') }}";
+          } else {
+              alert("Gagal menyimpan draf. Silakan coba lagi.");
+              btn.innerHTML = originalText;
+              btn.style.pointerEvents = 'auto';
+          }
+      } catch (err) {
+          alert("Gagal koneksi ke server.");
+          btn.innerHTML = originalText;
+          btn.style.pointerEvents = 'auto';
+      }
     }
 
     // Anti-Cheat (Page Visibility)
@@ -364,7 +434,16 @@
         }
     });
 
-    const initHtml = document.getElementById('raw-html-data').value;
+    let backupHtml = localStorage.getItem('backupHtml_' + {{ $assignment->id }});
+    let backupCss = localStorage.getItem('backupCss_' + {{ $assignment->id }});
+    if (backupHtml !== null) {
+        localStorage.removeItem('backupHtml_' + {{ $assignment->id }});
+    }
+    if (backupCss !== null) {
+        localStorage.removeItem('backupCss_' + {{ $assignment->id }});
+    }
+
+    const initHtml = backupHtml !== null ? backupHtml : document.getElementById('raw-html-data').value;
     const htmlEditor = new EditorView({
       doc: initHtml,
       extensions: [basicSetup, html(), oneDark, updateListener {{ ($assignment->type === 'tugas' && $submission->status === 'submitted') ? ', EditorView.editable.of(false)' : '' }}],
@@ -374,7 +453,7 @@
     window.getHtmlCode = () => htmlEditor.state.doc.toString();
 
     @if($assignment->has_css)
-      const initCss = document.getElementById('raw-css-data').value;
+      const initCss = backupCss !== null ? backupCss : document.getElementById('raw-css-data').value;
       const cssEditor = new EditorView({
         doc: initCss,
         extensions: [basicSetup, css(), oneDark, updateListener {{ ($assignment->type === 'tugas' && $submission->status === 'submitted') ? ', EditorView.editable.of(false)' : '' }}],
@@ -447,12 +526,21 @@
                     "X-Requested-With": "XMLHttpRequest"
                 },
                 body: formData
-            }).then(r => r.json()).then(res => {
-                if(res.success) {
+            }).then(r => {
+                if (r.status === 419) {
+                    alert("Sesi habis. Halaman akan disegarkan otomatis agar Anda bisa menyimpan. Kode Anda aman.");
+                    localStorage.setItem('backupHtml_' + {{ $assignment->id }}, window.getHtmlCode());
+                    localStorage.setItem('backupCss_' + {{ $assignment->id }}, (window.getCssCode ? window.getCssCode() : ''));
+                    window.location.reload();
+                    return;
+                }
+                return r.json();
+            }).then(res => {
+                if(res && res.success) {
                     lastSavedHtml = currentHtml;
                     lastSavedCss = currentCss;
                 }
-            });
+            }).catch(e => console.log('Auto-save error', e));
         }
     }, 15000); // 15 detik
   </script>
