@@ -12,13 +12,27 @@
 @endsection
 
 @section('content')
+<style>
+  .tab-btn { background:none; border:none; padding:12px 16px; color:#64748b; font-weight:600; cursor:pointer; font-size:0.875rem; border-bottom:2px solid transparent; transition:all 0.2s; margin-right:8px; }
+  .tab-btn:hover { color:#0f172a; }
+  .tab-btn.active { color:#3b82f6; border-bottom-color:#3b82f6; }
+</style>
+
 <div class="card">
-  <div class="card-header">
+  <div class="card-header" style="border-bottom: none; padding-bottom: 0;">
     <div>
       <div class="card-header-title">Daftar Tugas & Latihan</div>
       <div class="card-header-sub">Pantau soal dan pengumpulan siswa</div>
     </div>
   </div>
+  
+  <!-- Tabs -->
+  <div style="border-bottom: 1px solid #e2e8f0; padding: 0 20px 0 16px; margin-bottom: 0;">
+    <button class="tab-btn active" onclick="filterTable('semua', this)">Semua</button>
+    <button class="tab-btn" onclick="filterTable('tugas', this)">Tugas (Dinilai)</button>
+    <button class="tab-btn" onclick="filterTable('latihan', this)">Latihan (Bebas)</button>
+  </div>
+
   <div class="table-wrap" style="border:none;border-radius:0">
     <div class="table-responsive">
         <table>
@@ -34,7 +48,7 @@
       </thead>
       <tbody>
         @forelse($assignments as $tugas)
-        <tr>
+        <tr class="row-item" data-type="{{ $tugas->type }}">
           <td>
             <div class="td-main">{{ $tugas->title }}</div>
             <div class="td-sub">{{ Str::limit($tugas->description, 50) }}</div>
@@ -97,20 +111,62 @@
           </td>
         </tr>
         @empty
-        <tr>
+        <tr id="empty-row">
           <td colspan="6">
             <div class="empty-state">
               <div class="empty-state-icon"></div>
-              <h3>Belum Ada Tugas</h3>
+              <h3 id="empty-title">Belum Ada Tugas</h3>
               <p>Buat latihan ringan atau tugas untuk dikerjakan siswa</p>
               <a href="{{ route('guru.tugas.create') }}" class="btn btn-primary" style="margin-top:14px">Buat Sekarang</a>
             </div>
           </td>
         </tr>
         @endforelse
+        
+        <tr id="empty-filter-row" style="display:none;">
+          <td colspan="6">
+            <div class="empty-state">
+              <div class="empty-state-icon"></div>
+              <h3>Data Tidak Ditemukan</h3>
+              <p>Tidak ada data untuk kategori yang dipilih.</p>
+            </div>
+          </td>
+        </tr>
       </tbody>
     </table>
       </div>
   </div>
 </div>
+
+@push('scripts')
+<script>
+  function filterTable(type, btn) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    const rows = document.querySelectorAll('tbody tr.row-item');
+    let count = 0;
+    rows.forEach(row => {
+      if (type === 'semua' || row.dataset.type === type) {
+        row.style.display = '';
+        count++;
+      } else {
+        row.style.display = 'none';
+      }
+    });
+    
+    const emptyRow = document.getElementById('empty-row');
+    const emptyFilterRow = document.getElementById('empty-filter-row');
+    
+    if(emptyRow && emptyRow.style.display !== 'none') {
+       // if completely empty from backend
+       return;
+    }
+    
+    if (emptyFilterRow) {
+        emptyFilterRow.style.display = count === 0 ? '' : 'none';
+    }
+  }
+</script>
+@endpush
 @endsection
